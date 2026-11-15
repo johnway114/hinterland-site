@@ -1,6 +1,6 @@
 // Hinterland service worker: lets the web player open offline after the first visit.
 // Bump VERSION to drop old caches on the next deploy.
-const VERSION = "hinterland-v1";
+const VERSION = "hinterland-v2";
 const PRECACHE = [
   "./", "index.html", "app.css", "app.js", "mascot.png",
   "icon-192.png", "icon-512.png", "manifest.webmanifest",

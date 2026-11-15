@@ -550,6 +550,7 @@
       state.completed = true;
       state.wantsPlayback = false;
       savePosition(true);
+      celebrate();
     }
     renderAll();
   });
@@ -679,6 +680,7 @@
     state.pending = null;
     closeSheet('review');
     await openBook(book);
+    celebrate();
   }
 
   function moveCandidate(index, delta) {
@@ -812,18 +814,28 @@
 
   // ---------- mascot ----------
 
-  // The companion from Brand/mascot.svg, inline so its eyes and body can move.
-  // Moods: idle, thinking, happy, listening. Motion lives in app.css.
+  // The companion from Brand/mascot.svg, drawn inline so its body and eyes can
+  // move. One requestAnimationFrame loop animates every mascot on the page with
+  // the behaviour of MascotView.swift in the app: it breathes, blinks, glances
+  // around, follows the pointer, bounces when the pointer arrives and hops when
+  // clicked. Moods: idle, thinking, happy, listening, sleepy, celebrating.
+  // Brand/BRAND.md ("Motion") describes it. Lengths are artwork units.
   let mascotCount = 0;
   function mascotHTML(mood, size) {
     const id = `m${mascotCount += 1}`;
     const outline = 'M229 663 C213 557 223 374 250 267 C257 239 277 230 299 248 L376 310 C455 284 552 283 631 306 L710 243 C732 225 753 237 760 266 C787 374 800 558 785 663 C772 751 710 805 626 818 C555 830 467 829 393 817 C306 803 242 750 229 663 Z';
-    const eye = (x) => `<g class="mascot-eye"><ellipse cx="${x}" cy="537" rx="23" ry="34" fill="#48271F"/><ellipse cx="${x - 7}" cy="527" rx="6" ry="8" fill="#FFF0DA" opacity=".7"/></g>`;
-    return `<svg class="mascot mood-${mood}" width="${size}" height="${size}" viewBox="150 170 724 724" aria-hidden="true">
+    const eye = (x) => `<g class="mascot-eye"><ellipse cx="${x}" cy="537" rx="23" ry="34" fill="#48271F"/><ellipse class="mascot-glint" cx="${x - 7}" cy="527" rx="6" ry="8" fill="#FFF0DA" opacity=".7"/></g>`;
+    const closed = (x) => `M${x - 25} 556Q${x} 568 ${x + 25} 556`;
+    const squint = (x) => `M${x - 26.5} 545.5Q${x} 510 ${x + 26.5} 545.5`;
+    // Lines never thinner than one pixel, however small the companion.
+    const hairline = 724 / size;
+    requestMascotFrame();
+    return `<svg class="mascot" data-mood="${mood}" width="${size}" height="${size}" viewBox="150 170 724 724" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="${id}b" x1=".18" y1=".02" x2=".83" y2="1"><stop stop-color="#FFAE6D"/><stop offset=".47" stop-color="#F6813D"/><stop offset="1" stop-color="#D85120"/></linearGradient>
         <linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFD1A0"/><stop offset="1" stop-color="#F58A49"/></linearGradient>
         <linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFC090"/><stop offset="1" stop-color="#A93A1D"/></linearGradient>
+        <clipPath id="${id}l"><rect class="mascot-lid" x="360" y="380" width="290" height="260"/></clipPath>
       </defs>
       <ellipse class="mascot-shadow" cx="507" cy="846" rx="230" ry="26" fill="#6A2514" opacity=".16"/>
       <g class="mascot-body">
@@ -832,13 +844,452 @@
         <path d="M632 327 L719 260 C731 251 742 258 746 275 C752 301 757 330 762 359 C718 345 671 343 632 327 Z" fill="url(#${id}f)" opacity=".84"/>
         <path d="M636 328 C670 343 718 346 760 359" fill="none" stroke="#B84C24" stroke-opacity=".24" stroke-width="5" stroke-linecap="round"/>
         <path d="M277 397 C286 353 300 318 313 304" fill="none" stroke="#FFD3A9" stroke-opacity=".3" stroke-width="12" stroke-linecap="round"/>
-        <g class="mascot-eyes">${eye(427)}${eye(582)}</g>
+        <g class="mascot-eyes">
+          <g class="mascot-open" clip-path="url(#${id}l)">${eye(427)}${eye(582)}</g>
+          <path class="mascot-closed" d="${closed(427)}${closed(582)}" fill="none" stroke="#48271F" stroke-width="${Math.max(11, hairline).toFixed(1)}" stroke-linecap="round" opacity="0"/>
+          <path class="mascot-squint" d="${squint(427)}${squint(582)}" fill="none" stroke="#48271F" stroke-width="${Math.max(14, hairline).toFixed(1)}" stroke-linecap="round" opacity="0"/>
+        </g>
       </g>
     </svg>`;
   }
-  function setLibraryMascotMood() {
-    const mascot = $('#library .library-mascot .mascot');
-    if (mascot) mascot.setAttribute('class', `mascot mood-${audio.paused ? 'idle' : 'listening'}`);
+
+  const TAU = Math.PI * 2;
+  const smooth = (x) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+
+  // One hop `age` seconds in: a crouch, a stretched flight of `air` seconds, a
+  // squashed landing. Writes into one shared result to keep frames allocation-free.
+  const hopResult = { lift: 0, stretch: 0 };
+  function hop(age, air, height, squash) {
+    hopResult.lift = 0;
+    hopResult.stretch = 0;
+    if (age < 0) return hopResult;
+    if (age < 0.09) { hopResult.stretch = -squash * Math.sin((Math.PI / 2) * (age / 0.09)); return hopResult; }
+    const flight = (age - 0.09) / air;
+    if (flight < 1) {
+      hopResult.lift = height * Math.sin(Math.PI * flight);
+      hopResult.stretch = squash * Math.abs(Math.cos(Math.PI * flight));
+      return hopResult;
+    }
+    const settle = (age - 0.09 - air) / 0.16;
+    if (settle < 1) hopResult.stretch = -1.2 * squash * Math.sin(Math.PI * settle);
+    return hopResult;
+  }
+
+  // Openness through one blink that started `age` seconds ago: shut after `half`, open after twice that.
+  function blinkOpenness(age, half) {
+    if (age < 0 || age >= 2 * half) return 1;
+    return age < half ? 1 - smooth(age / half) : smooth((age - half) / half);
+  }
+
+  // What a mood contributes to a frame, so two moods can cross-fade.
+  const LAYER_KEYS = ['lift', 'tilt', 'stretch', 'open', 'gazeX', 'gazeY', 'gazeWeight', 'gazeScale', 'squint'];
+  const LAYER_REST = { lift: 0, tilt: 0, stretch: 0, open: 1, gazeX: 0, gazeY: 0, gazeWeight: 0, gazeScale: 1, squint: 0 };
+  // Celebrating: start, flight time, height and squash of each of three shrinking hops.
+  const CELEBRATION_HOPS = [[0, 0.5, 130, 0.1], [0.72, 0.46, 95, 0.09], [1.38, 0.4, 60, 0.07]];
+
+  // Pointer and taps, in viewport pixels; read once per frame by the loop.
+  const mascotPointer = { x: 0, y: 0, active: false, movedAt: -100, touchX: 0, touchY: 0, touchUntil: -100 };
+
+  class MascotBrain {
+    constructor(svg) {
+      const eyes = svg.querySelectorAll('.mascot-eye');
+      const glints = svg.querySelectorAll('.mascot-glint');
+      this.nodes = {
+        body: svg.querySelector('.mascot-body'), shadow: svg.querySelector('.mascot-shadow'),
+        eyes: svg.querySelector('.mascot-eyes'), open: svg.querySelector('.mascot-open'), lid: svg.querySelector('.mascot-lid'),
+        closed: svg.querySelector('.mascot-closed'), squint: svg.querySelector('.mascot-squint'),
+        left: eyes[0], right: eyes[1], glintLeft: glints[0], glintRight: glints[1],
+      };
+      // Offsets breathing and swaying so two companions are never in step.
+      this.phase = Math.random() * TAU;
+      this.started = false;
+      this.lastTime = 0;
+      this.mood = 'idle';
+      this.previousMood = 'idle';
+      this.moodStart = 0;
+      this.gazeX = 0; this.gazeY = 0; this.gazeVelocityX = 0; this.gazeVelocityY = 0;
+      this.glanceX = 0; this.glanceY = 0; this.glanceUntil = -100; this.nextGlance = 0;
+      this.blinkStart = -100; this.secondBlinkStart = -100; this.nextBlink = 0;
+      this.nodStart = -100; this.nextNod = 0;
+      this.softCloseStart = -100; this.nextSoftClose = 0;
+      this.widen = 0;
+      this.pointerX = 0; this.pointerY = 0; this.pointerActive = false; this.pointerInside = false; this.hoverStart = -100;
+      this.touchX = 0; this.touchY = 0; this.touchActive = false;
+      this.pokeStart = -100;
+      this.aimX = 0; this.aimY = 0;
+      this.layer = { ...LAYER_REST };
+      this.earlier = { ...LAYER_REST };
+      this.pose = { lift: 0, dx: 0, tilt: 0, stretch: 0, gazeX: 0, gazeY: 0, open: 1, eyeScale: 1, squint: false };
+    }
+
+    // A look target towards a point in artwork units: full reach half the artwork
+    // away, easing off a little for points far across a large window.
+    aim(ux, uy, pixelsPerUnit) {
+      const dx = ux - 504.5;
+      const dy = uy - 537;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 1) { this.aimX = 0; this.aimY = 0; return; }
+      const pixels = distance * pixelsPerUnit;
+      const near = Math.min(1, distance / 512);
+      const far = pixels < 700 ? 1 : Math.max(0.45, 1 - (pixels - 700) / 1600);
+      const reach = (near * far) / distance;
+      this.aimX = dx * reach;
+      this.aimY = dy * reach;
+    }
+
+    sense(rect, t) {
+      const unitsPerPixel = 724 / rect.width;
+      if (mascotPointer.active) {
+        const ux = 150 + (mascotPointer.x - rect.left) * unitsPerPixel;
+        const uy = 170 + (mascotPointer.y - rect.top) * unitsPerPixel;
+        this.aim(ux, uy, 1 / unitsPerPixel);
+        this.pointerX = this.aimX;
+        this.pointerY = this.aimY;
+        this.pointerActive = true;
+        const inside = ux > 235 && ux < 780 && uy > 250 && uy < 815;
+        if (inside && !this.pointerInside && t - this.hoverStart > 0.7) this.hoverStart = t;
+        this.pointerInside = inside;
+      } else {
+        this.pointerActive = false;
+        this.pointerInside = false;
+      }
+      this.touchActive = t < mascotPointer.touchUntil;
+      if (this.touchActive) {
+        this.aim(150 + (mascotPointer.touchX - rect.left) * unitsPerPixel, 170 + (mascotPointer.touchY - rect.top) * unitsPerPixel, 1 / unitsPerPixel);
+        this.touchX = this.aimX;
+        this.touchY = this.aimY;
+      }
+    }
+
+    start(t, mood) {
+      this.started = true;
+      this.lastTime = t;
+      this.mood = mood;
+      this.previousMood = mood;
+      this.moodStart = t;
+      this.nextBlink = t + 0.6 + 2.4 * Math.random();
+      this.nextGlance = t + 1 + 3 * Math.random();
+      this.nextNod = t + 2 + 3 * Math.random();
+      this.nextSoftClose = t + 3 + 4 * Math.random();
+    }
+
+    moodLayer(layer, mood, t, since) {
+      Object.assign(layer, LAYER_REST);
+      const sleepy = mood === 'sleepy';
+      layer.stretch = (sleepy ? 0.045 : 0.035) * Math.sin((TAU * t) / (sleepy ? 5.6 : 3.6) + this.phase);
+      switch (mood) {
+        case 'thinking': {
+          const cycle = (TAU * t) / 3.2 + this.phase;
+          layer.tilt = 5 * Math.sin(cycle);
+          layer.lift = 4 * (0.5 - 0.5 * Math.cos(2 * cycle));
+          layer.gazeX = 0.75 * Math.sin(cycle + 0.9);
+          layer.gazeY = -0.85;
+          layer.gazeWeight = 0.9;
+          break;
+        }
+        case 'happy': {
+          const bounce = hop(since % 1.5, 0.4, 55, 0.07);
+          layer.lift = bounce.lift;
+          layer.stretch += bounce.stretch;
+          layer.squint = 1;
+          break;
+        }
+        case 'listening': {
+          const beat = 0.5 - 0.5 * Math.cos((TAU * t) / 1.05);
+          layer.lift = -7 * beat;
+          layer.stretch -= 0.02 * beat;
+          layer.tilt = 2.5 * Math.sin((TAU * t) / 2.1 + this.phase);
+          layer.open = 0.9 * (1 - 0.85 * this.softClose(t));
+          layer.gazeScale = 0.7;
+          break;
+        }
+        case 'sleepy': {
+          const droop = this.nod(t);
+          layer.open = 0.42 * (1 - 0.9 * droop);
+          layer.lift = -16 * droop;
+          layer.tilt = 1.5 * Math.sin((TAU * t) / 7 + this.phase) + 3 * droop;
+          layer.gazeScale = 0.45;
+          break;
+        }
+        case 'celebrating': {
+          for (const [start, air, height, squash] of CELEBRATION_HOPS) {
+            const bounce = hop(since - start, air, height, squash);
+            layer.lift += bounce.lift;
+            layer.stretch += bounce.stretch;
+          }
+          if (since < 2.1) layer.tilt = 9 * Math.sin((TAU * since) / 0.72) * (1 - since / 2.1);
+          layer.squint = since < 2.4 ? 1 : 0;
+          break;
+        }
+        default:
+          break;
+      }
+      return layer;
+    }
+
+    step(t, mood) {
+      if (!this.started) this.start(t, mood);
+      const dt = Math.min(Math.max(t - this.lastTime, 0), 0.25);
+      this.lastTime = t;
+      if (mood !== this.mood) {
+        this.previousMood = this.mood;
+        this.mood = mood;
+        this.moodStart = t;
+        this.nodStart = -100;
+        this.softCloseStart = -100;
+        this.nextNod = t + 2 + 3 * Math.random();
+        this.nextSoftClose = t + 3 + 4 * Math.random();
+      }
+      const since = t - this.moodStart;
+      const layer = this.moodLayer(this.layer, mood, t, since);
+      if (this.previousMood !== mood && since < 0.5) {
+        const earlier = this.moodLayer(this.earlier, this.previousMood, t, since + 60);
+        const weight = smooth(since / 0.5);
+        for (const key of LAYER_KEYS) layer[key] = earlier[key] + (layer[key] - earlier[key]) * weight;
+      }
+
+      // Where to look: own glances, overridden by a recently moved pointer, then by a fresh tap.
+      if (t >= this.nextGlance) this.pickGlance(t);
+      let targetX = 0;
+      let targetY = 0;
+      if (t < this.glanceUntil) { targetX = this.glanceX; targetY = this.glanceY; }
+      if (this.pointerActive && t - mascotPointer.movedAt < 6) { targetX = this.pointerX; targetY = this.pointerY; }
+      if (this.touchActive) { targetX = this.touchX; targetY = this.touchY; }
+      targetX *= layer.gazeScale;
+      targetY *= layer.gazeScale;
+      targetX += (layer.gazeX - targetX) * layer.gazeWeight;
+      targetY += (layer.gazeY - targetY) * layer.gazeWeight;
+      this.stepGaze(targetX, targetY, dt);
+
+      // A full blink about every 2.5 to 6 seconds, sometimes twice.
+      const half = mood === 'sleepy' ? 0.22 : 0.12;
+      if (t >= this.nextBlink) {
+        this.blinkStart = t;
+        this.secondBlinkStart = Math.random() < 0.22 ? t + 2 * half + 0.08 : -100;
+        this.nextBlink = t + (mood === 'sleepy' ? 4 : 2.5) + 3.5 * Math.random();
+      }
+      const blink = Math.min(blinkOpenness(t - this.blinkStart, half), blinkOpenness(t - this.secondBlinkStart, half));
+
+      let lift = layer.lift;
+      let stretch = layer.stretch;
+      let tilt = layer.tilt;
+      let squint = layer.squint > 0.5;
+
+      // The pointer arriving: a quick bounce and wide eyes.
+      const hoverAge = t - this.hoverStart;
+      if (hoverAge < 0.6) {
+        const bounce = hop(hoverAge, 0.24, 22, 0.06);
+        lift += bounce.lift;
+        stretch += bounce.stretch;
+      }
+      this.widen += ((this.pointerInside ? 0.12 : 0) - this.widen) * Math.min(1, dt * 8);
+      let eyeScale = 1 + this.widen;
+      if (hoverAge < 1.5) eyeScale += 0.2 * smooth(hoverAge / 0.1) * Math.exp(-2.5 * hoverAge);
+
+      // A click or tap: a happy hop with squinting eyes, then back to the mood.
+      const pokeAge = t - this.pokeStart;
+      if (pokeAge < 0.85) {
+        const jump = hop(pokeAge, 0.42, 80, 0.08);
+        lift += jump.lift;
+        stretch += jump.stretch;
+        tilt += 5 * Math.sin((TAU * pokeAge) / 0.6) * (1 - pokeAge / 0.85);
+        squint = true;
+      }
+
+      // Lean into the look.
+      tilt += 4 * this.gazeX;
+      lift -= 5 * this.gazeY;
+
+      const pose = this.pose;
+      pose.lift = lift;
+      pose.dx = 12 * this.gazeX;
+      pose.tilt = tilt;
+      pose.stretch = stretch;
+      pose.gazeX = this.gazeX;
+      pose.gazeY = this.gazeY;
+      pose.open = layer.open * blink;
+      pose.eyeScale = eyeScale;
+      pose.squint = squint;
+      return pose;
+    }
+
+    // Reduced motion: a still pose per mood whose eyes point at the pointer.
+    still(mood) {
+      const pose = this.pose;
+      Object.assign(pose, { lift: 0, dx: 0, tilt: 0, stretch: 0, gazeX: 0, gazeY: 0, open: 1, eyeScale: 1, squint: false });
+      if (this.pointerActive) {
+        pose.gazeX = Math.round(this.pointerX * 10) / 10;
+        pose.gazeY = Math.round(this.pointerY * 10) / 10;
+      }
+      switch (mood) {
+        case 'thinking': pose.gazeX = -0.5; pose.gazeY = -0.8; pose.tilt = -4; break;
+        case 'happy': case 'celebrating': pose.squint = true; break;
+        case 'listening': pose.open = 0.85; pose.gazeX *= 0.7; pose.gazeY *= 0.7; break;
+        case 'sleepy': pose.open = 0.42; pose.gazeX *= 0.45; pose.gazeY *= 0.45; break;
+        default: break;
+      }
+      return pose;
+    }
+
+    stepGaze(x, y, dt) {
+      if (dt >= 0.2) {
+        this.gazeX = x; this.gazeY = y; this.gazeVelocityX = 0; this.gazeVelocityY = 0;
+        return;
+      }
+      // A slightly underdamped spring, so the eyes trail and settle with a hint of overshoot.
+      for (let remaining = dt; remaining > 0; remaining -= 1 / 120) {
+        const step = Math.min(remaining, 1 / 120);
+        this.gazeVelocityX += (110 * (x - this.gazeX) - 15 * this.gazeVelocityX) * step;
+        this.gazeVelocityY += (110 * (y - this.gazeY) - 15 * this.gazeVelocityY) * step;
+        this.gazeX += this.gazeVelocityX * step;
+        this.gazeY += this.gazeVelocityY * step;
+      }
+    }
+
+    // A look around every 3 to 6 seconds: mostly sideways, sometimes up.
+    pickGlance(t) {
+      const pick = Math.random();
+      const spread = Math.random() - 0.5;
+      if (pick < 0.35) { this.glanceX = -0.8; this.glanceY = 0.3 * spread; }
+      else if (pick < 0.7) { this.glanceX = 0.8; this.glanceY = 0.3 * spread; }
+      else if (pick < 0.87) { this.glanceX = 0.8 * spread; this.glanceY = -0.75; }
+      else { this.glanceX = 1.2 * spread; this.glanceY = 0.35; }
+      this.glanceUntil = t + 0.7 + 0.9 * Math.random();
+      this.nextGlance = t + 3 + 3 * Math.random();
+    }
+
+    // Sleepy: every 6 to 10 seconds the head droops slowly and lifts again.
+    nod(t) {
+      if (t >= this.nextNod) { this.nodStart = t; this.nextNod = t + 6 + 4 * Math.random(); }
+      const age = t - this.nodStart;
+      if (age >= 2.4) return 0;
+      const x = age / 2.4;
+      return x < 0.65 ? smooth(x / 0.65) : 1 - smooth((x - 0.65) / 0.35);
+    }
+
+    // Listening: now and then the eyes close softly for a moment.
+    softClose(t) {
+      if (t >= this.nextSoftClose) { this.softCloseStart = t; this.nextSoftClose = t + 7 + 5 * Math.random(); }
+      const age = t - this.softCloseStart;
+      if (age >= 1.8) return 0;
+      if (age < 0.35) return smooth(age / 0.35);
+      return age < 1.4 ? 1 : 1 - smooth((age - 1.4) / 0.4);
+    }
+  }
+
+  function writeAttribute(element, name, value) {
+    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+  }
+
+  // Transforms and opacity only: nothing here changes layout.
+  function applyMascotPose(brain, pose) {
+    const nodes = brain.nodes;
+    const rise = Math.max(0, pose.lift);
+    writeAttribute(nodes.body, 'transform', `translate(${pose.dx.toFixed(2)} ${(-pose.lift).toFixed(2)}) rotate(${pose.tilt.toFixed(2)} 507 818) translate(507 818) scale(${(1 - 0.75 * pose.stretch).toFixed(4)} ${(1 + pose.stretch).toFixed(4)}) translate(-507 -818)`);
+    writeAttribute(nodes.shadow, 'transform', `translate(507 846) scale(${Math.max(0.55, 1 - rise / 320).toFixed(3)}) translate(-507 -846)`);
+    writeAttribute(nodes.shadow, 'opacity', (0.16 * Math.max(0.45, 1 - rise / 260)).toFixed(3));
+    writeAttribute(nodes.eyes, 'transform', `translate(${(pose.gazeX * 50).toFixed(2)} ${(pose.gazeY * 34).toFixed(2)})`);
+    const shape = pose.squint ? 'squint' : pose.open < 0.14 ? 'closed' : 'open';
+    writeAttribute(nodes.open, 'opacity', shape === 'open' ? '1' : '0');
+    writeAttribute(nodes.closed, 'opacity', shape === 'closed' ? '1' : '0');
+    writeAttribute(nodes.squint, 'opacity', shape === 'squint' ? '1' : '0');
+    if (shape !== 'open') return;
+    // The upper lid comes down flat, so half-open reads as drowsy rather than small.
+    const scale = pose.eyeScale;
+    const lid = 537 - 34 * scale + (1 - pose.open) * 68 * scale;
+    writeAttribute(nodes.lid, 'transform', `translate(0 ${(lid - 380).toFixed(2)})`);
+    writeAttribute(nodes.left, 'transform', `translate(427 537) scale(${scale.toFixed(3)}) translate(-427 -537)`);
+    writeAttribute(nodes.right, 'transform', `translate(582 537) scale(${scale.toFixed(3)}) translate(-582 -537)`);
+    const glint = pose.open > 0.55 ? '.7' : '0';
+    writeAttribute(nodes.glintLeft, 'opacity', glint);
+    writeAttribute(nodes.glintRight, 'opacity', glint);
+  }
+
+  // The single loop: read every mascot's box first, then write transforms, so
+  // frames never force a layout. It stops when the tab is hidden or no mascot
+  // is on the page; with reduced motion it runs only when the pointer or a mood changes.
+  const mascotElements = document.getElementsByClassName('mascot');
+  const mascotBrains = new WeakMap();
+  const mascotRects = [];
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  let mascotFrame = 0;
+
+  function requestMascotFrame() {
+    if (!mascotFrame && !document.hidden) mascotFrame = requestAnimationFrame(drawMascots);
+  }
+
+  function drawMascots(milliseconds) {
+    mascotFrame = 0;
+    const t = milliseconds / 1000;
+    const count = mascotElements.length;
+    const reduced = reducedMotion.matches;
+    for (let i = 0; i < count; i += 1) mascotRects[i] = mascotElements[i].getBoundingClientRect();
+    for (let i = 0; i < count; i += 1) {
+      const svg = mascotElements[i];
+      const rect = mascotRects[i];
+      if (!rect.width || rect.bottom < 0 || rect.top > innerHeight) continue;
+      let brain = mascotBrains.get(svg);
+      if (!brain) { brain = new MascotBrain(svg); mascotBrains.set(svg, brain); }
+      brain.sense(rect, t);
+      const mood = svg.dataset.mood;
+      applyMascotPose(brain, reduced ? brain.still(mood) : brain.step(t, mood));
+    }
+    mascotRects.length = 0;
+    if (count && !reduced) requestMascotFrame();
+  }
+
+  addEventListener('pointermove', (event) => {
+    if (event.pointerType === 'touch') return;
+    mascotPointer.x = event.clientX;
+    mascotPointer.y = event.clientY;
+    mascotPointer.active = true;
+    mascotPointer.movedAt = performance.now() / 1000;
+    if (reducedMotion.matches) requestMascotFrame();
+  }, { passive: true });
+  document.addEventListener('mouseout', (event) => {
+    if (event.relatedTarget) return;
+    mascotPointer.active = false;
+    requestMascotFrame();
+  });
+  // A click or tap on a mascot is a poke; anywhere else it is a reason to glance over.
+  addEventListener('pointerdown', (event) => {
+    const now = performance.now() / 1000;
+    const svg = event.target instanceof Element ? event.target.closest('svg.mascot') : null;
+    const brain = svg && mascotBrains.get(svg);
+    if (brain) {
+      brain.pokeStart = now;
+    } else {
+      mascotPointer.touchX = event.clientX;
+      mascotPointer.touchY = event.clientY;
+      mascotPointer.touchUntil = now + 1.6;
+    }
+  }, { passive: true, capture: true });
+  document.addEventListener('visibilitychange', requestMascotFrame);
+  reducedMotion.addEventListener?.('change', requestMascotFrame);
+
+  function setMascotMood(svg, mood) {
+    if (!svg || svg.dataset.mood === mood) return;
+    svg.dataset.mood = mood;
+    requestMascotFrame();
+  }
+
+  // The header companion reflects the app: a brief celebration after a book is
+  // added or finished, thinking during an import, sleepy while a sleep timer is
+  // set, listening while audio plays.
+  let celebrateUntil = 0;
+  function appMascotMood() {
+    if (performance.now() < celebrateUntil) return 'celebrating';
+    if (state.pending?.busy) return 'thinking';
+    if (state.sleepDeadline) return 'sleepy';
+    return audio.paused ? 'idle' : 'listening';
+  }
+  function updateMascotMoods() {
+    setMascotMood($('#title-mascot .mascot'), appMascotMood());
+  }
+  function celebrate() {
+    celebrateUntil = performance.now() + 2800;
+    updateMascotMoods();
+    setTimeout(updateMascotMoods, 2850);
   }
 
   // ---------- rendering ----------
@@ -875,7 +1326,6 @@
           </li>`).join('')}
         </ul>
         <p class="section-footer">Your listening position is saved in this browser.</p>
-        <div class="library-mascot">${mascotHTML(audio.paused ? 'idle' : 'listening', 84)}</div>
       </section>`;
   }
 
@@ -993,7 +1443,7 @@
     if (!(focused && focused.tagName === 'SELECT' && $('#player').contains(focused))) renderPlayer();
     renderMini();
     renderMiniWindow();
-    setLibraryMascotMood();
+    updateMascotMoods();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
   }
 
@@ -1038,7 +1488,14 @@
       </li>`).join('');
     const status = $('#review-status');
     status.hidden = !pending.busy;
-    status.innerHTML = pending.busy ? `${mascotHTML('thinking', 56)}<div class="review-progress"><p>${escapeHTML(pending.status || 'Preparing your book…')}</p><progress max="1" value="${pending.progress}"></progress></div>` : '';
+    // Keep the thinking companion between progress updates so its rhythm carries on.
+    if (!pending.busy) status.innerHTML = '';
+    else {
+      if (!status.querySelector('.mascot')) status.innerHTML = `${mascotHTML('thinking', 56)}<div class="review-progress"><p></p><progress max="1"></progress></div>`;
+      $('.review-progress p', status).textContent = pending.status || 'Preparing your book…';
+      $('progress', status).value = pending.progress;
+    }
+    updateMascotMoods();
     const error = $('#review-error');
     error.hidden = !pending.error;
     error.innerHTML = pending.error ? `${icon('warn', 20)} <span>${escapeHTML(pending.error)}</span>` : '';
@@ -1165,7 +1622,7 @@
   }
 
   // A cancelled dialog (Escape) must not leave an import half-open.
-  $('#review').addEventListener('close', () => { state.pending = null; });
+  $('#review').addEventListener('close', () => { state.pending = null; updateMascotMoods(); });
   $('#rename-form').addEventListener('submit', (event) => { event.preventDefault(); $('[data-action="rename-save"]').click(); });
   for (const sheet of document.querySelectorAll('dialog')) {
     sheet.addEventListener('click', (event) => {
@@ -1199,6 +1656,8 @@
   // ---------- start ----------
 
   (async () => {
+    const titleMascot = $('#title-mascot');
+    if (titleMascot) titleMascot.innerHTML = mascotHTML(appMascotMood(), 44);
     try {
       database = await openDatabase();
       state.books = (await loadBooks()).sort((a, b) => b.created - a.created);

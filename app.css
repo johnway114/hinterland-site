@@ -1315,38 +1315,18 @@ body.dragging .drop-hint { display: grid; }
 
 /* === lead-owned additions below === */
 
-/* ---------- mascot: a quiet companion that breathes, blinks and reacts ---------- */
-.mascot { display: block; overflow: visible; flex: none; }
+/* ---------- mascot: the companion; app.js moves it with SVG transform attributes ---------- */
+.mascot { display: block; overflow: visible; flex: none; -webkit-tap-highlight-color: transparent; user-select: none; }
 .empty .mascot { margin: 0 auto; }
-.mascot-body { transform-box: fill-box; transform-origin: 50% 100%; animation: mascot-breathe 4.2s ease-in-out infinite; }
-.mascot-eye { transform-box: fill-box; transform-origin: 50% 50%; animation: mascot-blink 5.2s ease-in-out infinite; }
-.mascot-eyes { transform-box: fill-box; transform-origin: 50% 50%; }
-.mascot-shadow { transform-box: fill-box; transform-origin: 50% 50%; animation: mascot-shadow 4.2s ease-in-out infinite; }
 
-.mood-thinking .mascot-body { animation: mascot-tilt 2.6s ease-in-out infinite; }
-.mood-thinking .mascot-eyes { animation: mascot-glance 2.6s ease-in-out infinite; }
-.mood-listening .mascot-body { animation: mascot-sway 3.2s ease-in-out infinite; }
-.mood-happy .mascot-body { animation: mascot-hop 0.7s ease-in-out infinite; }
-.mood-happy .mascot-eye { animation: none; transform: scaleY(0.55); }
-
-@keyframes mascot-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.2%) scale(1.012, 0.988); } }
-@keyframes mascot-shadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.94); } }
-@keyframes mascot-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
-@keyframes mascot-tilt { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
-@keyframes mascot-glance { 0%, 100% { transform: translate(-16px, -8px); } 50% { transform: translate(16px, -8px); } }
-@keyframes mascot-sway { 0%, 100% { transform: rotate(-3deg) translateY(0); } 25% { transform: rotate(0) translateY(-1%); } 50% { transform: rotate(3deg) translateY(0); } 75% { transform: rotate(0) translateY(-1%); } }
-@keyframes mascot-hop { 0%, 100% { transform: translateY(0) scale(1.02, 0.98); } 45% { transform: translateY(-6%) scale(0.99, 1.02); } }
-
-.library-mascot { display: flex; justify-content: center; padding: 28px 0 8px; opacity: 0.95; }
+/* A small companion beside the page title, the app's signature. */
+.large-title { display: flex; align-items: center; gap: 8px; }
+.title-mascot { display: block; flex: none; width: 44px; height: 44px; margin: -2px 0; }
 
 #review-status:not([hidden]) { display: flex; align-items: center; gap: 14px; }
 #review-status .review-progress { flex: 1; min-width: 0; }
 #review-status .review-progress p { margin: 0 0 8px; }
 #review-status progress { width: 100%; }
-
-@media (prefers-reduced-motion: reduce) {
-  .mascot-body, .mascot-eye, .mascot-eyes, .mascot-shadow { animation: none !important; }
-}
 
 /* ---------- mini player window (Document Picture-in-Picture) ---------- */
 body.pip {
