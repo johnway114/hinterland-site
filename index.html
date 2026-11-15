@@ -2,17 +2,383 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hinterland — Your next chapter</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Free M4B and MP3 audiobook player in a browser | Hinterland</title>
+  <meta name="description" content="Play M4B, MP3 and M4A audiobooks free in your browser. Chapters, speed control, a sleep timer and your saved place. Files stay on your device, never uploaded.">
+  <link rel="canonical" href="https://johnway114.github.io/hinterland-site/">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#FBF7F1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1B1A19" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Hinterland">
+  <meta property="og:title" content="Hinterland: a free audiobook player for M4B, MP3 and M4A">
+  <meta property="og:description" content="Play the audiobooks you own, right in your browser. Chapters, speed control, a sleep timer and your saved place. Nothing is uploaded.">
+  <meta property="og:url" content="https://johnway114.github.io/hinterland-site/">
+  <meta property="og:image" content="https://johnway114.github.io/hinterland-site/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="The Hinterland app icon">
+  <meta property="og:locale" content="en_GB">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Hinterland: a free audiobook player for M4B, MP3 and M4A">
+  <meta name="twitter:description" content="Play the audiobooks you own, right in your browser. Chapters, speed control, a sleep timer and your saved place. Nothing is uploaded.">
+  <meta name="twitter:image" content="https://johnway114.github.io/hinterland-site/icon-512.png">
+  <meta name="twitter:image:alt" content="The Hinterland app icon">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="app.css">
+  <script src="app.js" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Hinterland",
+        "url": "https://johnway114.github.io/hinterland-site/",
+        "description": "A free audiobook player for MP3, M4A and M4B files that runs in your browser. Files stay on your device and are never uploaded.",
+        "image": "https://johnway114.github.io/hinterland-site/icon-512.png",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "THREEFOLD LTD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Hinterland free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. The web player is free. There is no account, no ads and no tracking." }
+          },
+          {
+            "@type": "Question",
+            "name": "Are my audiobooks uploaded anywhere?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Your files are stored only in this browser, on your device. Nothing is sent to a server." }
+          },
+          {
+            "@type": "Question",
+            "name": "Which audiobook formats can I play?",
+            "acceptedAnswer": { "@type": "Answer", "text": "MP3, M4A and M4B files without DRM. You can add one file, several files or a whole folder, and they become one book." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I play Audible books?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Audible AAX files and other protected (DRM) files do not work in Hinterland." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it remember where I stopped?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Hinterland saves your listening position in this browser. Close the page, come back later and carry on from the same spot." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it show M4B chapters?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. In the player, open Chapters & tracks to see the chapters in an M4B file and jump to any of them." }
+          },
+          {
+            "@type": "Question",
+            "name": "Will my books stay in the browser forever?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Not always. Browsers can clear stored books, for example when you clear site data or your device runs low on space. Keep your original files so you can add them again." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does the web player sync with the iPhone app?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. The web player does not sync with the iPhone app or iCloud. The iPhone and iPad app is coming to the App Store." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
+  <a class="skip-link" href="#about">Skip to information about Hinterland</a>
+
   <main>
-    <p class="eyebrow">HINTERLAND</p>
-    <h1>A little further into a good book.</h1>
-    <p class="intro">Bring your audiobooks. Keep your place. A quiet, native player for iPhone and iPad, with optional sync through your own iCloud account.</p>
-    <nav aria-label="Information"><a href="support.html">Support</a><a href="privacy.html">Privacy</a></nav>
-    <footer>For the books you already own. · THREEFOLD LTD</footer>
+    <section class="app" aria-label="Hinterland web player">
+      <header class="topbar">
+        <button class="glass-button" data-action="settings" aria-label="Settings" title="Settings">
+          <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5Z"/></svg>
+        </button>
+        <button class="glass-button" data-action="add" aria-label="Add audiobook" title="Add audiobook">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </header>
+      <p class="large-title">Hinterland</p>
+      <div id="library">
+        <noscript><p class="unavailable">The web player needs JavaScript. Turn it on in your browser to add and play audiobooks.</p></noscript>
+      </div>
+    </section>
+
+    <section id="player" class="player-view" aria-labelledby="player-heading" hidden>
+      <header class="player-bar">
+        <span class="bar-start">
+          <button class="bar-button back-button" data-action="close-player">
+            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
+            Library
+          </button>
+        </span>
+        <h2 id="player-heading" class="sheet-title eyebrow">Now listening</h2>
+        <span class="bar-end">
+          <button id="mini-window-button" class="glass-button" data-action="mini-window" aria-label="Open mini player" title="Open mini player" hidden>
+            <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><rect x="12" y="12" width="7" height="5" rx="1.2" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </span>
+      </header>
+      <div class="player-layout">
+        <div id="player-body"></div>
+        <aside id="contents" aria-label="Chapters and tracks">
+          <h2 class="contents-heading">Chapters &amp; tracks</h2>
+          <div id="contents-body"></div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="content" id="about">
+      <header class="intro">
+        <h1 class="serif">Free audiobook player for MP3, M4A and M4B files</h1>
+        <p class="lead">Hinterland plays the audiobooks you already own, right here in your browser. Add a file or a folder, press play, and come back to the same spot later. Nothing is uploaded.</p>
+      </header>
+
+      <section aria-labelledby="how-heading">
+        <h2 id="how-heading" class="serif">How it works</h2>
+        <ol class="steps">
+          <li>
+            <h3>Add your audiobook</h3>
+            <p>Choose files or a whole folder, or drag them onto this page. Several files become one book.</p>
+          </li>
+          <li>
+            <h3>Check the order</h3>
+            <p>Give the book a title. Use the arrows to put the tracks in the right order.</p>
+          </li>
+          <li>
+            <h3>Press play</h3>
+            <p>Hinterland remembers where you stopped, even after you close the page.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="features-heading">
+        <h2 id="features-heading" class="serif">What it does</h2>
+        <ul class="features">
+          <li><h3>Keeps your place</h3><p>Your listening position is saved in this browser as you listen.</p></li>
+          <li><h3>Shows chapters</h3><p>M4B chapters appear in a list. Tap one to jump straight to it.</p></li>
+          <li><h3>Changes speed</h3><p>Listen at 0.75×, 1×, 1.25×, 1.5×, 1.75× or 2×.</p></li>
+          <li><h3>Sleep timer</h3><p>Stop playback after 15, 30 or 60 minutes.</p></li>
+          <li><h3>Quick skips</h3><p>Go back 15 seconds or forward 30 seconds with one tap.</p></li>
+          <li><h3>One book from many files</h3><p>Choose several files or a folder. They play as one book, track after track.</p></li>
+          <li><h3>Drag and drop</h3><p>Drop audio files or a folder anywhere on this page to add a book.</p></li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="formats-heading">
+        <h2 id="formats-heading" class="serif">Supported formats</h2>
+        <dl class="formats">
+          <div><dt>M4B</dt><dd>Audiobook files, with their chapters.</dd></div>
+          <div><dt>M4A</dt><dd>AAC audio files.</dd></div>
+          <div><dt>MP3</dt><dd>The most common audio format.</dd></div>
+        </dl>
+        <p>Files must be free of DRM. Audible AAX files and other protected files do not work. If a file will not play, try another browser.</p>
+        <p><a href="how-to-play-m4b-files.html">How to play M4B files</a></p>
+      </section>
+
+      <section aria-labelledby="private-heading">
+        <h2 id="private-heading" class="serif">Private by design</h2>
+        <p>Your audiobooks are stored only in this browser, in its own storage on your device. They are never uploaded. There is no account, no ads and no tracking.</p>
+        <p>Browsers can clear stored books, for example when you clear site data or your device runs low on space. Keep your original files so you can add a book again. Read the <a href="privacy.html">privacy policy</a>.</p>
+      </section>
+
+      <section aria-labelledby="test-heading">
+        <h2 id="test-heading" class="serif">Try it with a free test file</h2>
+        <p>No audiobook to hand? Download a 90-second test file in M4B format. It holds three chapters of artificial tones, so you can try chapters, skipping and speed.</p>
+        <p><a class="download" href="review/hinterland-test.m4b" download>Download the test audiobook (M4B, 0.4 MB)</a></p>
+      </section>
+
+      <section aria-labelledby="ios-heading">
+        <h2 id="ios-heading" class="serif">Hinterland for iPhone and iPad</h2>
+        <p>A Hinterland app for iPhone and iPad is coming to the App Store. It plays the same MP3, M4A and M4B files. If you turn on sync, it keeps your books and listening position in your own iCloud account.</p>
+        <p>The web player does not sync with the app or with iCloud. Books you add here stay in this browser.</p>
+      </section>
+
+      <section aria-labelledby="faq-heading">
+        <h2 id="faq-heading" class="serif">Questions and answers</h2>
+        <div class="faq">
+          <details>
+            <summary>Is Hinterland free?</summary>
+            <p>Yes. The web player is free. There is no account, no ads and no tracking.</p>
+          </details>
+          <details>
+            <summary>Are my audiobooks uploaded anywhere?</summary>
+            <p>No. Your files are stored only in this browser, on your device. Nothing is sent to a server.</p>
+          </details>
+          <details>
+            <summary>Which audiobook formats can I play?</summary>
+            <p>MP3, M4A and M4B files without DRM. You can add one file, several files or a whole folder, and they become one book.</p>
+          </details>
+          <details>
+            <summary>Can I play Audible books?</summary>
+            <p>No. Audible AAX files and other protected (DRM) files do not work in Hinterland.</p>
+          </details>
+          <details>
+            <summary>Does it remember where I stopped?</summary>
+            <p>Yes. Hinterland saves your listening position in this browser. Close the page, come back later and carry on from the same spot.</p>
+          </details>
+          <details>
+            <summary>Does it show M4B chapters?</summary>
+            <p>Yes. In the player, open Chapters &amp; tracks to see the chapters in an M4B file and jump to any of them.</p>
+          </details>
+          <details>
+            <summary>Will my books stay in the browser forever?</summary>
+            <p>Not always. Browsers can clear stored books, for example when you clear site data or your device runs low on space. Keep your original files so you can add them again.</p>
+          </details>
+          <details>
+            <summary>Does the web player sync with the iPhone app?</summary>
+            <p>No. The web player does not sync with the iPhone app or iCloud. The iPhone and iPad app is coming to the App Store.</p>
+          </details>
+        </div>
+      </section>
+
+    </div>
   </main>
+
+  <footer class="site-footer">
+    <nav aria-label="More about Hinterland">
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="how-to-play-m4b-files.html">How to play M4B files</a>
+    </nav>
+    <p>Hinterland · THREEFOLD LTD</p>
+  </footer>
+
+  <div id="mini" class="mini" hidden></div>
+
+  <input id="pick-files" type="file" multiple accept=".mp3,.m4a,.m4b,audio/*" hidden>
+  <input id="pick-folder" type="file" webkitdirectory multiple hidden>
+
+  <div class="drop-hint" aria-hidden="true">
+    <div class="drop-card">
+      <svg class="icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <p class="drop-title">Drop to add an audiobook</p>
+      <p>Files or a folder become one book. Nothing is uploaded.</p>
+    </div>
+  </div>
+
+  <!-- Sheets. app.js opens them with showModal(); any button with data-close="<id>" closes one. -->
+
+  <dialog id="add" class="action-sheet" aria-labelledby="add-heading" aria-describedby="add-message">
+    <div class="action-group">
+      <div class="action-head">
+        <h2 id="add-heading">Add an audiobook</h2>
+        <p id="add-message">A selection of files or a folder becomes one book. Your originals stay where they are.</p>
+      </div>
+      <button class="action" data-action="choose-files">Choose files</button>
+      <button class="action" data-action="choose-folder">Choose folder</button>
+    </div>
+    <button class="action cancel" data-close="add">Cancel</button>
+    <p class="action-note">You can also drag files or a folder onto this page.</p>
+  </dialog>
+
+  <dialog id="review" class="sheet" data-dismiss="no" aria-labelledby="review-heading">
+    <div class="sheet-bar">
+      <span class="bar-start"><button class="bar-button" data-action="review-cancel">Cancel</button></span>
+      <h2 id="review-heading" class="sheet-title">Review import</h2>
+      <span class="bar-end"><button id="review-commit" class="bar-button strong" data-action="review-commit" disabled>Add Book</button></span>
+    </div>
+    <div class="sheet-body">
+      <section class="group">
+        <h3 class="group-header"><label for="review-title">Book title</label></h3>
+        <div class="card"><input id="review-title" class="field" type="text" placeholder="Book title" autocomplete="off" spellcheck="false"></div>
+        <p class="group-footer">You can rename this later. Your original files won’t change.</p>
+      </section>
+      <section class="group" aria-labelledby="review-order-heading">
+        <h3 class="group-header"><span id="review-order-heading">Track order</span><span id="review-count">0 files</span></h3>
+        <div id="review-status" class="card status" role="status" hidden></div>
+        <ol id="review-list" class="card review-list"></ol>
+        <p class="group-footer">Use the arrows to change playback order. All these files will become one book.</p>
+      </section>
+      <div id="review-error" class="error" role="alert" hidden></div>
+    </div>
+  </dialog>
+
+  <dialog id="settings" class="sheet" aria-labelledby="settings-heading">
+    <div class="sheet-bar">
+      <span class="bar-start"></span>
+      <h2 id="settings-heading" class="sheet-title">Settings</h2>
+      <span class="bar-end"><button class="bar-button" data-close="settings">Done</button></span>
+    </div>
+    <div class="sheet-body">
+      <section class="group" aria-labelledby="settings-device">
+        <h3 id="settings-device" class="group-header">On this device</h3>
+        <div class="card">
+          <p class="row"><span>Stored audio</span><span id="settings-storage" class="row-value">—</span></p>
+        </div>
+        <p id="settings-persist" class="group-footer"></p>
+      </section>
+      <section class="group" aria-labelledby="settings-about">
+        <h3 id="settings-about" class="group-header">About Hinterland</h3>
+        <ul class="card">
+          <li><a class="row" href="privacy.html">Privacy <svg class="icon chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a></li>
+          <li><a class="row" href="support.html">Help &amp; support <svg class="icon chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a></li>
+        </ul>
+        <p class="group-footer">The web player keeps books in this browser only. It does not sync with the iPhone app or iCloud.</p>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="actions" class="action-sheet" aria-labelledby="actions-title">
+    <div class="action-group">
+      <div class="action-head">
+        <h2 id="actions-title">Book</h2>
+      </div>
+      <button class="action" data-action="rename">Rename</button>
+      <button class="action destructive" data-action="delete">Delete Book</button>
+    </div>
+    <button class="action cancel" data-close="actions">Cancel</button>
+  </dialog>
+
+  <dialog id="rename" class="sheet compact" aria-labelledby="rename-heading">
+    <form id="rename-form">
+      <div class="sheet-bar">
+        <span class="bar-start"><button type="button" class="bar-button" data-close="rename">Cancel</button></span>
+        <h2 id="rename-heading" class="sheet-title">Rename book</h2>
+        <span class="bar-end"><button type="button" class="bar-button strong" data-action="rename-save">Save</button></span>
+      </div>
+      <div class="sheet-body">
+        <section class="group">
+          <h3 class="group-header"><label for="rename-title">Book title</label></h3>
+          <div class="card"><input id="rename-title" class="field" type="text" placeholder="Title" autocomplete="off" spellcheck="false" required autofocus></div>
+          <p class="group-footer">Renaming a book doesn’t change its audio files or your originals.</p>
+        </section>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="delete" class="action-sheet" aria-labelledby="delete-title" aria-describedby="delete-message">
+    <div class="action-group">
+      <div class="action-head">
+        <h2 id="delete-title">Delete book?</h2>
+        <p id="delete-message">This removes Hinterland’s copy and listening position from this browser. Your original files are untouched.</p>
+      </div>
+      <button class="action destructive" data-action="delete-confirm">Delete Book</button>
+    </div>
+    <button class="action cancel" data-close="delete" autofocus>Cancel</button>
+  </dialog>
+
+  <dialog id="alert" class="alert" role="alertdialog" aria-labelledby="alert-heading" aria-describedby="alert-message">
+    <h2 id="alert-heading">Playback needs attention</h2>
+    <p id="alert-message"></p>
+    <button class="alert-button" data-close="alert">OK</button>
+  </dialog>
 </body>
 </html>

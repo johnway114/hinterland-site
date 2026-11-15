@@ -1,0 +1,16 @@
+{
+  "name": "Hinterland: Audiobook Player",
+  "short_name": "Hinterland",
+  "description": "A free, private audiobook player. Add your own MP3, M4A and M4B files and listen in your browser. Your books stay on your device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBF7F1",
+  "theme_color": "#FBF7F1",
+  "categories": ["books", "music"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
